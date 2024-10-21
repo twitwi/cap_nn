@@ -36,6 +36,7 @@
       #points = {{ debug.limitPointCount }} <input type="range" v-model.number="debug.limitPointCount" min="0" max="50" />
       // min speed: <input v-model.number="minSpeed" />
       // max speed: <input v-model.number="maxSpeed" />
+      // d+/km: <input v-model.number="dposPerKm" />
     </div>
 
     <div id="found_tracks">
@@ -64,14 +65,14 @@
             {{ Math.round(r.distAlt) }}km, {{ Math.round(r.dposAlt) }}D+ ({{
               r.velAlt.toFixed(1)
             }}km/h) ({{
-              (((r.distAlt + r.dposAlt / 150) / r.elapsed) * 3600).toFixed(1)
+              (((r.distAlt + r.dposAlt / this.dposPerKm) / r.elapsed) * 3600).toFixed(1)
             }}{{ff}}/h)
           </td>
           <td v-if="r.dist" :colspan="r.distAlt ? 1 : 2">
             {{ Math.round(r.dist) }}km, {{ Math.round(r.dpos) }}D+ ({{
               r.vel.toFixed(1)
             }}km/h) ({{
-              (((r.dist + r.dpos / 150) / r.elapsed) * 3600).toFixed(1)
+              (((r.dist + r.dpos / this.dposPerKm) / r.elapsed) * 3600).toFixed(1)
             }}{{ff}}/h)
           </td>
           <td v-else :colspan="2"></td>
@@ -195,6 +196,7 @@ export default Vue.defineComponent({
       limitPointCount: 999,
       log: [],
     },
+    dposPerKm: 115,
     minSpeed: 3,
     maxSpeed: 16,
     currentPointTimestamp: null,
@@ -259,8 +261,8 @@ export default Vue.defineComponent({
         return null;
       }
       const r = this.tableRows[0]
-      const totalStrain = this.distTotal + this.dposTotal / 150
-      const currentStrainPerTime = (r.dist + r.dpos / 150) / r.elapsed
+      const totalStrain = this.distTotal + this.dposTotal / this.dposPerKm
+      const currentStrainPerTime = (r.dist + r.dpos / this.dposPerKm) / r.elapsed
       return this.start + totalStrain / currentStrainPerTime
     },
     tableRows() {
@@ -389,15 +391,15 @@ export default Vue.defineComponent({
   },
   methods: {
     cdsText(dist, dpos) {
-      const eff = dist + dpos / 150;
+      const eff = dist + dpos / this.dposPerKm;
       return `${dist.toFixed(1)}km, ${dpos.toFixed(0)}D+ (${eff.toFixed(0)}${this.ff})`;
     },
     estimateAsTooltip(ll) {
       const track = this.gpx.tracks[this.gpxTrkid];
       const cdplus = compute_dplus_cumul(track)
       const nearests = representerNearestPointsInTrack({lat:ll.lat, lon:ll.lng}, track, 1.5, 30)
-      const strains = nearests.map(i => [i, track.distance.cumul[i] / 1000 + cdplus[i] / 150])
-      const getStrain = r => r.start ? 0 : r.dist + r.dpos / 150
+      const strains = nearests.map(i => [i, track.distance.cumul[i] / 1000 + cdplus[i] / this.dposPerKm])
+      const getStrain = r => r.start ? 0 : r.dist + r.dpos / this.dposPerKm
       console.log(this.tableRows.length, this.tableRows[0])
       if (this.tableRows.length === 0 || ! this.tableRows[0].dist) {
         return nearests.map(i => this.cdsText(track.distance.cumul[i] / 1000, cdplus[i])).join("<br/>");
@@ -405,7 +407,7 @@ export default Vue.defineComponent({
       const times = strains.map(([i,s]) => {
         let iafter = this.tableRows.length - 1
         for (; iafter >= 0 ; iafter--) {
-          if (s < this.tableRows[iafter].dist + this.tableRows[iafter].dpos / 150) {
+          if (s < this.tableRows[iafter].dist + this.tableRows[iafter].dpos / this.dposPerKm) {
             break
           }
         }
