@@ -67,16 +67,22 @@ function compute_dplus_cumul(gpx_track) {
         i++;
     }
     p_prev = gpx_track.points[i - 1];
+    let last_ele = p_prev.ele;
+    let STEP = 9 // flat unless at least STEP meters from current plateau
+    // poor man's no-backtrack smoothing
     for (; i<gpx_track.points.length; i++) {
         let p = gpx_track.points[i];
 
-        if (p.ele > p_prev.ele) {
-            gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1] + p.ele - p_prev.ele)
+        if (p.ele > last_ele + STEP) {
+            gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1] + p.ele - last_ele);
+            last_ele = p.ele;
         } else {
-            gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1])
-        }
-        if (gpx_track.points[i].ele !== null) {
-            p_prev = gpx_track.points[i];
+            if (p.ele < last_ele - STEP) {
+                gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1]);
+                last_ele = p.ele;
+            } else {
+                gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1]);
+            }
         }
     }
     return gpx_track.dplus_cumul
