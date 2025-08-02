@@ -73,6 +73,10 @@ function compute_dplus_cumul(gpx_track) {
     for (; i<gpx_track.points.length; i++) {
         let p = gpx_track.points[i];
 
+        if (p.ele == null) {
+            gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1]);
+            continue;
+        }
         if (p.ele > last_ele + STEP) {
             gpx_track.dplus_cumul.push(gpx_track.dplus_cumul[i - 1] + p.ele - last_ele);
             last_ele = p.ele;
